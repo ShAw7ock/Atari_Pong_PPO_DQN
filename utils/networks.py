@@ -45,7 +45,7 @@ class CriticNetwork(nn.Module):
         self.fc_obs = nn.Linear(32 * 9 * 9, hidden_sizes)
         self.fc_act = nn.Linear(action_dim, hidden_sizes)
         self.fc_out = nn.Linear(hidden_sizes, 1)
-        self.nonLinearity = nn.ReLU
+        self.nonLinearity = torch.relu
 
     def forward(self, state, action):
         conv_out_obs = self.conv_layers_observation(state).view(state.size()[0], -1)
