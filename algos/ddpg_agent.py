@@ -15,16 +15,18 @@ class DDPGAgent:
                  actor_lr=0.002,
                  batch_size=32,
                  gamma=0.90,
-                 tau=0.01,
-                 use_cuda=False):
+                 tau=0.01):
 
         self.observation_space = observation_space
         self.action_space = action_space
         self.replay_buffer = replay_buffer
+        self.hidden_sizes = hidden_sizes
+        self.critic_lr = critic_lr
+        self.actor_lr = actor_lr
         self.batch_size = batch_size
         self.gamma = gamma
         self.tau = tau
-        self.device = 'cuda:0' if use_cuda and torch.cuda.is_available() else 'cpu'
+        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
         self.critic = CriticNetwork(observation_space=observation_space, hidden_sizes=hidden_sizes).to(self.device)
         self.target_critic = CriticNetwork(observation_space=observation_space, hidden_sizes=hidden_sizes).to(self.device)
@@ -81,6 +83,7 @@ class DDPGAgent:
             explore (boolean): Whether or not to add exploration noise
         Outputs:
             action (int): Actions for this agent
+        Used for 'train' mode
         """
         state = np.array(obs) / 255.0
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
@@ -110,13 +113,27 @@ class DDPGAgent:
                 batch_actions.append(action)
         return np.array(batch_actions)
 
-    def get_params(self):
-        return {'actor': self.actor.state_dict(),
-                'critic': self.critic.state_dict(),
-                'target_actor': self.target_actor.state_dict(),
-                'target_critic': self.target_critic.state_dict(),
-                'actor_optimizer': self.actor_optim.state_dict(),
-                'critic_optimizer': self.critic_optim.state_dict()}
+    def step_best(self, obs):
+        """
+        This function chooses the action based on the best action
+        but not the probability.
+        Used for 'evaluation' mode.
+        """
+        state = np.array(obs) / 255.0
+        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            action_probs = self.actor(state)
+            _, action = action_probs.max(dim=1)
+            return action
+
+    def save(self, filename):
+        net_param = {'actor': self.actor.state_dict(),
+                     'critic': self.critic.state_dict(),
+                     'target_actor': self.target_actor.state_dict(),
+                     'target_critic': self.target_critic.state_dict(),
+                     'actor_optimizer': self.actor_optim.state_dict(),
+                     'critic_optimizer': self.critic_optim.state_dict()}
+        torch.save(net_param, filename)
 
     def load_params(self, params):
         self.actor.load_state_dict(params['actor'])

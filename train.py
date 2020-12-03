@@ -12,11 +12,27 @@ import matplotlib.pyplot as plt
 matplotlib.use('TkAgg')
 
 
-def train_your_nicest_model():
-    run(config)
+def train_model():
+    train(config)
 
 
-def run(config):
+def train(config):
+    model_dir = Path('/.models')
+    if not model_dir.exists():
+        curr_run = 'run1'
+    else:
+        exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in model_dir.iterdir()
+                         if str(folder.name).startswith('run')]
+        if len(exst_run_nums) == 0:
+            curr_run = 'run1'
+        else:
+            curr_run = 'run%i' % (max(exst_run_nums) + 1)
+    run_dir = model_dir / curr_run
+    figures_dir = run_dir / 'figures'
+
+    os.makedirs(str(run_dir), exist_ok=True)
+    os.makedirs(str(figures_dir))
+    torch.manual_seed(config.seed)
     np.random.seed(config.seed)
 
     assert "NoFrameskip" in config.env, "Require environment with no frameskip"
@@ -43,9 +59,12 @@ def run(config):
         actor_lr=config.actor_lr,
         batch_size=config.batch_size,
         gamma=config.discounted_factor,
-        tau=config.tau,
-        use_cuda=config.use_cuda
+        tau=config.tau
     )
+
+    if config.saved_model:
+        print(f"Loading the networks parameters - { config.saved_model } ")
+        agent.load_params(torch.load(config.saved_model))
 
     total_rewards = []
     episodes_count = 0
@@ -71,7 +90,7 @@ def run(config):
                 break
             state = next_state
 
-        if done and episode_i % config.print_freq == 0:
+        if episode_i % config.print_freq == 0:
             mean_100ep_reward = np.mean(total_rewards[-101:-1])
             print("********************************************************")
             print("steps: {}".format(episodes_count))
@@ -79,10 +98,27 @@ def run(config):
             print("mean 100 episode reward: {}".format(mean_100ep_reward))
             print("********************************************************")
 
+        if episode_i % config.save_model_freq == 0:
+            agent.save(str(run_dir / ('model_ep%i.pt' % episode_i)))
+            agent.save(str(run_dir / 'model.pt'))
+
+    agent.save(str(run_dir / 'model.pt'))
+    env.close()
+
+    index = list(range(len(total_rewards)))
+    plt.plot(index, total_rewards)
+    plt.ylabel('Total Rewards')
+    plt.savefig(str(figures_dir) + '/reward_curve.jpg')
+    # plt.show()
+    plt.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', default='PongNoFrameskip-v4', type=str)
+    parser.add_argument('--saved_model', default=None, type=str,
+                        help='If you wanna load the model you have save before (for example: models/run1/model.pt)')
+    parser.add_argument('--mode', default='train', type=str, choices=['train', 'evaluate'])
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--buffer_size', default=5000, type=int)
     parser.add_argument('--actor_lr', default=0.002, type=float)
@@ -92,11 +128,11 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_sizes', default=256, type=int)
     parser.add_argument('--num_episodes', default=1000, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
-    parser.add_argument('--use_cuda', default=True, type=bool)
     parser.add_argument('--learning_start', default=10000, type=int)
     parser.add_argument('--update_target_freq', default=1000, type=int)
     parser.add_argument('--print_freq', default=10, type=int)
+    parser.add_argument('--save_model_freq', default=100, type=int)
 
     config = parser.parse_args()
 
-    train_your_nicest_model()
+    train_model()
