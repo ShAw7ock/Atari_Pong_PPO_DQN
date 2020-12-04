@@ -4,6 +4,7 @@ Evaluation for save the video with the best model you have trained
 import argparse
 import os
 from pathlib import Path
+import time
 import torch
 from utils.memory import ReplayBuffer
 from utils.env_wrappers import *
@@ -32,7 +33,8 @@ def run(config):
     env = PyTorchFrame(env)
     env = ClipRewardEnv(env)
     env = FrameStack(env, 4)
-    env = gym.wrappers.Monitor(env, './video/', video_callable=lambda episode_id: episode_id % 1 == 0, force=True)
+    # env = gym.wrappers.Monitor(env, './video/', video_callable=lambda episode_id: episode_id % 1 == 0, force=True)
+    ifi = 1 / config.fps
 
     replay_buffer = ReplayBuffer(config.buffer_size)
 
@@ -44,7 +46,10 @@ def run(config):
     for episode_i in range(config.num_episodes):
         state = env.reset()
         episode_reward = 0.0
+        if config.display:
+            env.render()
         while True:
+            calc_start = time.time()
             action = agent.step_best(state)
             next_state, reward, done, info = env.step(action)
             episode_reward += reward
@@ -52,6 +57,12 @@ def run(config):
             if done:
                 break
             state = next_state
+            if config.display:
+                calc_end = time.time()
+                elapsed = calc_end - calc_start
+                if elapsed < ifi:
+                    time.sleep(ifi - elapsed)
+                env.render()
 
         print("********************************************************")
         print("steps: {}".format(episodes_count))
@@ -70,6 +81,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--buffer_size', default=5000, type=int)
     parser.add_argument('--num_episodes', default=10, type=int)
+    parser.add_argument('--display', default=True, type=bool, help='Render the env while running')
+    parser.add_argument('--fps', default=30, type=int)
 
     config = parser.parse_args()
 

@@ -46,7 +46,7 @@ def run(config):
     env = PyTorchFrame(env)
     env = ClipRewardEnv(env)
     env = FrameStack(env, 4)
-    # env = gym.wrappers.Monitor(env, './video/', video_callable=False, force=True)
+    # env = gym.wrappers.Monitor(env, './video/', video_callable=lambda episode_id: episode_id % 1 == 0, force=True)
 
     replay_buffer = ReplayBuffer(config.buffer_size)
 
@@ -72,6 +72,10 @@ def run(config):
     for episode_i in range(config.num_episodes):
         episode_reward = 0.0
         state = env.reset()
+
+        if config.display:
+            env.render()
+
         while True:
             action = agent.step(state)
             next_state, reward, done, info = env.step(action)
@@ -88,6 +92,9 @@ def run(config):
                 total_rewards.append(episode_reward)
                 break
             state = next_state
+
+            if config.display:
+                env.render()
 
         if episode_i % config.print_freq == 0:
             mean_100ep_reward = np.mean(total_rewards[-101:-1])
@@ -130,6 +137,7 @@ if __name__ == '__main__':
     parser.add_argument('--update_target_freq', default=1000, type=int)
     parser.add_argument('--print_freq', default=10, type=int)
     parser.add_argument('--save_model_freq', default=100, type=int)
+    parser.add_argument('--display', default=False, type=bool, help='Render the env while running')
 
     config = parser.parse_args()
 
