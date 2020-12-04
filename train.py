@@ -13,10 +13,10 @@ matplotlib.use('TkAgg')
 
 
 def train_model():
-    train(config)
+    run(config)
 
 
-def train(config):
+def run(config):
     model_dir = Path('/.models')
     if not model_dir.exists():
         curr_run = 'run1'
@@ -46,7 +46,7 @@ def train(config):
     env = PyTorchFrame(env)
     env = ClipRewardEnv(env)
     env = FrameStack(env, 4)
-    env = gym.wrappers.Monitor(env, './video/', video_callable=False, force=True)
+    # env = gym.wrappers.Monitor(env, './video/', video_callable=False, force=True)
 
     replay_buffer = ReplayBuffer(config.buffer_size)
 
@@ -71,9 +71,8 @@ def train(config):
 
     for episode_i in range(config.num_episodes):
         episode_reward = 0.0
-        done = False
         state = env.reset()
-        while not done:
+        while True:
             action = agent.step(state)
             next_state, reward, done, info = env.step(action)
             agent.replay_buffer.add(state, action, reward, next_state, float(done))
@@ -114,11 +113,10 @@ def train(config):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Train Mode')
     parser.add_argument('--env', default='PongNoFrameskip-v4', type=str)
     parser.add_argument('--saved_model', default=None, type=str,
                         help='If you wanna load the model you have save before (for example: models/run1/model.pt)')
-    parser.add_argument('--mode', default='train', type=str, choices=['train', 'evaluate'])
     parser.add_argument('--seed', default=1, type=int)
     parser.add_argument('--buffer_size', default=5000, type=int)
     parser.add_argument('--actor_lr', default=0.002, type=float)
