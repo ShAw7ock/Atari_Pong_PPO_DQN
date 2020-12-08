@@ -2,7 +2,7 @@ from gym import spaces
 import numpy as np
 import torch
 import torch.optim as optim
-from utils.networks import ActorNetwork, CriticNetwork
+from utils.ddpg_networks import ActorNetwork, CriticNetwork
 from utils.misc import soft_update, hard_update
 
 
@@ -55,7 +55,7 @@ class DDPGAgent:
         next_actions_tensor = torch.from_numpy(next_actions).float().to(self.device)
         dones_tensor = torch.from_numpy(dones).float().to(self.device)
 
-        target_q = rewards_tensor + (1 - dones_tensor) * self.gamma *\
+        target_q = rewards_tensor.unsqueeze(1) + (1 - dones_tensor.unsqueeze(1)) * self.gamma *\
                    self.target_critic(next_states_tensor, next_actions_tensor.unsqueeze(1))
         actual_q = self.critic(states_tensor, actions_tensor.unsqueeze(1))
         critic_loss = self.loss_fuc(target_q, actual_q)
@@ -107,9 +107,10 @@ class DDPGAgent:
             with torch.no_grad():
                 if mode == 'target':
                     action_probs = self.target_actor(state).cpu().numpy()
+                    action = np.argmax(action_probs, axis=1)[0]
                 else:
                     action_probs = self.actor(state).cpu().numpy()
-                action = np.random.choice(np.arange(action_probs.shape[1]), p=action_probs.ravel())
+                    action = np.random.choice(np.arange(action_probs.shape[1]), p=action_probs.ravel())
                 batch_actions.append(action)
         return np.array(batch_actions)
 
@@ -124,7 +125,7 @@ class DDPGAgent:
         with torch.no_grad():
             action_probs = self.actor(state)
             _, action = action_probs.max(dim=1)
-            return action
+            return action.item()
 
     def save(self, filename):
         net_param = {'actor': self.actor.state_dict(),

@@ -1,5 +1,6 @@
 import argparse
 import os
+import math
 from pathlib import Path
 import torch
 import numpy as np
@@ -17,7 +18,7 @@ def train_model():
 
 
 def run(config):
-    model_dir = Path('/.models')
+    model_dir = Path('./ddpg_models')
     if not model_dir.exists():
         curr_run = 'run1'
     else:
@@ -66,46 +67,47 @@ def run(config):
         print(f"Loading the networks parameters - { config.saved_model } ")
         agent.load_params(torch.load(config.saved_model))
 
-    total_rewards = []
-    episodes_count = 0
+    total_rewards = [0.0]
+    mean_100ep_rewards = []
 
-    for episode_i in range(config.num_episodes):
-        episode_reward = 0.0
-        state = env.reset()
+    state = env.reset()
+    for step_i in range(config.num_steps):
+        if config.display:
+            env.render()
+
+        action = agent.step(state)
+        next_state, reward, done, info = env.step(action)
+        agent.replay_buffer.add(state, action, reward, next_state, float(done))
+
+        state = next_state
+        total_rewards[-1] += reward
+        if done:
+            state = env.reset()
+            total_rewards.append(0.0)
+
+        if len(replay_buffer) > config.batch_size and step_i > config.learning_start:
+            agent.update()
+            agent.update_target()
 
         if config.display:
             env.render()
 
-        while True:
-            action = agent.step(state)
-            next_state, reward, done, info = env.step(action)
-            agent.replay_buffer.add(state, action, reward, next_state, float(done))
-            episode_reward += reward
-            episodes_count += 1
+        num_episode = len(total_rewards)
 
-            if len(replay_buffer) > config.batch_size and episodes_count > config.learning_start:
-                agent.update()
-            if episodes_count > config.learning_start and episodes_count % config.update_target_freq == 0:
-                agent.update_target()
-
-            if done:
-                total_rewards.append(episode_reward)
-                break
-            state = next_state
-
-            if config.display:
-                env.render()
-
-        if episode_i % config.print_freq == 0:
-            mean_100ep_reward = np.mean(total_rewards[-101:-1])
+        if done and num_episode % config.print_freq == 0:
+            mean_100ep_reward = round(np.mean(total_rewards[-101:-1]), 1)
             print("********************************************************")
-            print("steps: {}".format(episodes_count))
-            print("episodes: {}".format(episode_i))
+            print("steps: {}".format(step_i))
+            print("episodes: {}".format(num_episode))
             print("mean 100 episode reward: {}".format(mean_100ep_reward))
             print("********************************************************")
+            with open(str(run_dir) + '/episodes_reward.csv', 'ab') as file:
+                np.savetxt(file, total_rewards[-config.print_freq-1:-1], delimiter=',', fmt='%1.2f')
+            mean_100ep_rewards.append(mean_100ep_reward)
 
-        if episode_i % config.save_model_freq == 0:
-            agent.save(str(run_dir / ('model_ep%i.pt' % episode_i)))
+        if done and num_episode % config.save_model_freq == 0:
+            # os.makedirs(str(run_dir / 'incremental'), exist_ok=True)
+            # agent.save(str(run_dir / 'incremental' / ('model_ep%i.pt' % num_episode)))
             agent.save(str(run_dir / 'model.pt'))
 
     agent.save(str(run_dir / 'model.pt'))
@@ -118,26 +120,32 @@ def run(config):
     # plt.show()
     plt.close()
 
+    index = list(range(len(mean_100ep_rewards)))
+    plt.plot(index, mean_100ep_rewards)
+    plt.ylabel('mean_100ep_reward')
+    plt.savefig(str(figures_dir) + '/mean_100ep_reward_curve.jpg')
+    # plt.show()
+    plt.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Mode')
     parser.add_argument('--env', default='PongNoFrameskip-v4', type=str)
     parser.add_argument('--saved_model', default=None, type=str,
-                        help='If you wanna load the model you have save before (for example: models/run1/model.pt)')
-    parser.add_argument('--seed', default=1, type=int)
+                        help='Load the model you have save before (for example: ./ddpg_models/run1/model.pt)')
+    parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--buffer_size', default=5000, type=int)
     parser.add_argument('--actor_lr', default=0.002, type=float)
     parser.add_argument('--critic_lr', default=0.001, type=float)
     parser.add_argument('--discounted_factor', default=0.90, type=float)
     parser.add_argument('--tau', default=0.01, type=float)
     parser.add_argument('--hidden_sizes', default=256, type=int)
-    parser.add_argument('--num_episodes', default=1000, type=int)
+    parser.add_argument('--num_steps', default=int(1e6), type=int)
     parser.add_argument('--batch_size', default=32, type=int)
-    parser.add_argument('--learning_start', default=10000, type=int)
-    parser.add_argument('--update_target_freq', default=1000, type=int)
-    parser.add_argument('--print_freq', default=10, type=int)
-    parser.add_argument('--save_model_freq', default=100, type=int)
-    parser.add_argument('--display', default=False, type=bool, help='Render the env while running')
+    parser.add_argument('--learning_start', default=10000, type=int, help='count with inner step')
+    parser.add_argument('--print_freq', default=10, type=int, help='count with outer episode')
+    parser.add_argument('--save_model_freq', default=10, type=int, help='count with outer episode')
+    parser.add_argument('--display', default=True, type=bool, help='Render the env while running')
 
     config = parser.parse_args()
 

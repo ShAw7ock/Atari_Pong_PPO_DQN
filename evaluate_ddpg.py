@@ -50,7 +50,7 @@ def run(config):
             env.render()
         while True:
             calc_start = time.time()
-            action = agent.step_best(state)
+            action = agent.step(state)
             next_state, reward, done, info = env.step(action)
             episode_reward += reward
             episodes_count += 1
@@ -67,7 +67,7 @@ def run(config):
         print("********************************************************")
         print("steps: {}".format(episodes_count))
         print("episodes: {}".format(episode_i))
-        print("mean 100 episode reward: {}".format(episode_reward))
+        print("mean episode reward: {}".format(episode_reward))
         print("********************************************************")
 
     env.close()
@@ -76,9 +76,9 @@ def run(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate Mode')
     parser.add_argument('--env', default='PongNoFrameskip-v4', type=str)
-    parser.add_argument('--saved_model', default=None, type=str, required=True,
-                        help='Load the model you have saved before (for example: models/run1/model.pt)')
-    parser.add_argument('--seed', default=1, type=int)
+    parser.add_argument('--saved_model', default='./ddpg_models/run5/model.pt', type=str,
+                        help='Load the model you have saved before (for example: ./ddpg_models/run1/model.pt)')
+    parser.add_argument('--seed', default=43, type=int)
     parser.add_argument('--buffer_size', default=5000, type=int)
     parser.add_argument('--num_episodes', default=10, type=int)
     parser.add_argument('--display', default=True, type=bool, help='Render the env while running')
