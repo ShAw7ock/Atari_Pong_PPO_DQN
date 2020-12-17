@@ -2,7 +2,7 @@ from gym import spaces
 import numpy as np
 
 from utils.dqn_neurips_network import DQN
-from dqn.replay_buffer import ReplayBuffer
+from utils.memory import ReplayBuffer
 import torch
 import torch.nn.functional as F
 

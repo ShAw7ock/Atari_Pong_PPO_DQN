@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_model_freq', default=10, type=int, help='count with outer episode')
     parser.add_argument('--e_greedy_end', default=0.01, type=float, help='e-greedy end threshold')
     parser.add_argument('--e_greedy_fraction', default=0.1, type=float, help='fraction of num-steps')
-    parser.add_argument('--display', default=True, type=bool, help='Render the env while running')
+    parser.add_argument('--display', default=False, type=bool, help='Render the env while running')
 
     config = parser.parse_args()
 
