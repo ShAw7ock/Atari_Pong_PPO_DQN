@@ -2,7 +2,7 @@ from gym import spaces
 import numpy as np
 import torch
 import torch.optim as optim
-from utils.ddpg_networks import ActorNetwork, CriticNetwork
+from utils.ddpg_net_complicate import ActorNetwork, CriticNetwork
 from utils.misc import soft_update, hard_update
 
 
@@ -93,10 +93,12 @@ class DDPGAgent:
 
     def batch_step(self, batch_obs, mode):
         """
-        Because function 'step' can only receive one piece of state,
-        but DDPG algorithms need batch training.
+        Function 'step' have 'np.random.choice' which can only receive one piece of state,
+        but DDPG algorithms need batch training to select batch actions.
         This function is used to receive batch observations and return batch actions.
-        mode = ['net', 'target']
+
+        mode = 'target' : Select the argmax action
+        mode = 'net' : Select the random action according to the probability
         """
         if not type(batch_obs) == np.ndarray:
             batch_obs = batch_obs.cpu().numpy()

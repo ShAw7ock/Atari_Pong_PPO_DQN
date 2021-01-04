@@ -1,6 +1,6 @@
+from gym import spaces
 import torch
 import torch.nn as nn
-from gym import spaces
 
 
 class ActorNetwork(nn.Module):
@@ -37,6 +37,7 @@ class ActorNetwork(nn.Module):
             nn.ReLU()
         )
         self.relu = nn.ReLU()
+
         self.fc_layers = nn.Sequential(
             nn.Linear(2 * 10 * 10, hidden_sizes),
             nn.ReLU(),
@@ -60,7 +61,7 @@ class ActorNetwork(nn.Module):
 
 
 class CriticNetwork(nn.Module):
-    def __init__(self, observation_space, hidden_sizes=256):
+    def __init__(self, observation_space, action_dim=1, hidden_sizes=256):
         super(CriticNetwork, self).__init__()
         assert type(observation_space) == spaces.Box
         assert len(observation_space.shape) == 3
@@ -92,13 +93,11 @@ class CriticNetwork(nn.Module):
             nn.ReLU()
         )
         self.relu = nn.ReLU()
-        self.fc_layers = nn.Sequential(
-            nn.Linear(2 * 10 * 10, hidden_sizes),
-            nn.ReLU(),
-            nn.Linear(hidden_sizes, 1)
-        )
+        self.fc_obs = nn.Linear(2 * 10 * 10, hidden_sizes)
+        self.fc_act = nn.Linear(action_dim, hidden_sizes)
+        self.fc_out = nn.Linear(hidden_sizes, 1)
 
-    def forward(self, state):
+    def forward(self,state, action):
         x0 = self.conv_layers(state)
         x1 = self.resnetBlock(x0) + x0
         x2 = self.relu(x1)
@@ -108,6 +107,11 @@ class CriticNetwork(nn.Module):
         x6 = self.relu(x5)
         x7 = self.resnetBlock(x6) + x6
         x8 = self.relu(x7)
-        x9 = self.denseLayer(x8)
-        value = self.fc_layers(x9.view(state.size()[0], -1))
+        conv_out_obs = self.denseLayer(x8).view(state.size()[0], -1)
+        out_obs = self.fc_obs(conv_out_obs)
+        out_act = self.fc_act(action)
+        out_obs_act = out_obs + out_act
+        out = self.relu(out_obs_act)
+        value = self.fc_out(out)
+
         return value

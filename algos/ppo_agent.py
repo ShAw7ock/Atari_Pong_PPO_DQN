@@ -37,6 +37,7 @@ class PPOAgent:
         self.actor_optim = torch.optim.RMSprop(self.actor.parameters(), lr=actor_lr)
 
         self.loss_func = torch.nn.MSELoss()
+        # PPO algorithm is on-policy and don't need a complicate buffer, so that the memory need to clear after update
         self.memory = []
 
     def step(self, state):
@@ -68,6 +69,7 @@ class PPOAgent:
 
         discounted_reward = 0
         mc_rewards = []
+        # Compute the Monte-Carlo rewards within one trajectory (in an update_freq interval)
         for reward, is_terminal in zip(reversed(rewards), reversed(is_terminals)):
             if is_terminal:
                 discounted_reward = 0

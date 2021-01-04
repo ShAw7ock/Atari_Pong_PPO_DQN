@@ -142,7 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_epochs', default=4, type=int)
     parser.add_argument('--hidden_sizes', default=256, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
-    parser.add_argument('--num_steps', default=int(1e6), type=int)
+    parser.add_argument('--num_steps', default=int(2e6), type=int)
     parser.add_argument('--update_freq', default=2000, type=int, help='count with inner step')
     parser.add_argument('--print_freq', default=10, type=int, help='count with outer episode')
     parser.add_argument('--save_model_freq', default=10, type=int, help='count with outer episode')

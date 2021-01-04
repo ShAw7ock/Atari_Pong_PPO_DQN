@@ -5,16 +5,8 @@ import torch.nn.functional as F
 
 # Class structure loosely inspired by https://towardsdatascience.com/beating-video-games-with-deep-q-networks-7f73320b9592
 class DQN(nn.Module):
-    """
-    A basic implementation of a Deep Q-Network. The architecture is the same as that described in the
-    neurips DQN paper.
-    """
-
-    def __init__(self,
-                 observation_space: spaces.Box,
-                 action_space: spaces.Discrete):
+    def __init__(self, observation_space, action_space):
         """
-        Initialise the DQN
         :param observation_space: the state space of the environment
         :param action_space: the action space of the environment
         """
