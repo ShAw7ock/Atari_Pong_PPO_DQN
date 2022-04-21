@@ -13,4 +13,9 @@ Since the complex convolution layers are used, the PPO Algorithm can work well a
 But with the difference between DDPG and PPO (DDPG is the deterministic action algorithm but PPO is not, so DDPG will use
 the complex neural networks frequently to select the deterministic actions), DDPG Algorithm can not train the agent usefully
 
-# Thanks for using ShAw7ock's code!
+# NOTE!
+This code will not update anymore.
+
+Please see [ShAw7ock/emdqn_torch](https://github.com/ShAw7ock/emdqn_torch) to get the DQN codes in Atari Envs.
+
+Thanks for using ShAw7ock's code.
